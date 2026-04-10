@@ -1,0 +1,45 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "acuaflex-41372",
+          "appId": "1:202313896579:android:1d6b238844cce65d2fc1b6",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "acuaflex-41372",
+          "configurations": {
+            "android": "1:202313896579:android:1d6b238844cce65d2fc1b6",
+            "ios": "1:202313896579:ios:0f8ea9e181d5d2732fc1b6",
+            "macos": "1:202313896579:ios:0f8ea9e181d5d2732fc1b6",
+            "web": "1:202313896579:web:911bc256adf030a72fc1b6",
+            "windows": "1:202313896579:web:04974fd14d794c9d2fc1b6"
+          }
+        }
+      }
+    }
+  }
+}

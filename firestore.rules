@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Perfiles de usuario (rol admin/driver): cada usuario solo lee/escribe el suyo
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Entregas: solo usuarios autenticados
+    match /deliveries/{deliveryId} {
+      allow read, write: if request.auth != null;
+      // Subcolección de evidencias (fotos "No entregado")
+      match /evidences/{evidenceId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+    // Claves por orderId / legacy
+    match /delivery_keys/{keyId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

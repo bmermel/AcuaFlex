@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "202313896579",
+    "project_id": "acuaflex-41372",
+    "storage_bucket": "acuaflex-41372.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202313896579:android:1d6b238844cce65d2fc1b6",
+        "android_client_info": {
+          "package_name": "com.example.acuaflex_v1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaeEIaAsuWjq7dBo_zxVvKmb_tI8MvO_8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
