@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
-import '../../../core/data/local_database.dart';
 import '../../../core/data/sync_service.dart';
+import '../domain/delivery_state.dart';
 import '../../../core/debug_delivery_log.dart';
 import '../domain/delivery.dart';
 
@@ -229,11 +229,12 @@ class DeliveryRepository {
   /// Borra una entrega por id y deja delivery_keys consistente:
   /// si tenía orderId y quedan otras entregas con ese orderId, actualiza la key;
   /// si no queda ninguna, elimina el documento de la key.
+  /// Usa [SyncService.deleteDelivery] para mantener SQLite y Firestore alineados.
   Future<void> deleteDeliveryAndCleanKey(String deliveryId) async {
     final delivery = await getDeliveryById(deliveryId);
     if (delivery == null) return;
     final orderId = delivery.orderId?.trim();
-    await _col.doc(deliveryId).delete();
+    await SyncService.instance.deleteDelivery(deliveryId);
     if (orderId == null || orderId.isEmpty) return;
     final remaining = await getDeliveriesByOrderId(orderId);
     if (remaining.isEmpty) {
@@ -241,6 +242,24 @@ class DeliveryRepository {
     } else {
       final first = remaining.first;
       await updateKeyConductor(orderId, first.conductorId, first.id);
+    }
+  }
+
+  /// Elimina entregas en [pendiente] con más de 72 h desde [fechaEscaneo] (ejecutado desde la app del conductor).
+  Future<void> purgeStalePendingDeliveries(String conductorId) async {
+    if (conductorId.trim().isEmpty) return;
+    final all = await getDeliveriesByDriver(conductorId);
+    final now = DateTime.now();
+    const maxAge = Duration(hours: 72);
+    for (final d in all) {
+      if (d.estado != DeliveryState.pendiente) continue;
+      if (d.conductorId != conductorId) continue;
+      if (now.difference(d.fechaEscaneo) <= maxAge) continue;
+      try {
+        await deleteDeliveryAndCleanKey(d.id);
+      } catch (_) {
+        // Sin red u otra causa: intentar el resto
+      }
     }
   }
 

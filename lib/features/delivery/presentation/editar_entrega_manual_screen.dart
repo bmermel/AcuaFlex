@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/auth/auth_service.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../core/data/user_repository.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/delivery_repository.dart';
@@ -86,7 +86,7 @@ class _EditarEntregaManualScreenState extends State<EditarEntregaManualScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Entrega actualizada.'),
-          backgroundColor: AppTheme.entregadoColor,
+          backgroundColor: AppTheme.adminEntregadoColor,
         ),
       );
       context.pop();
@@ -121,6 +121,8 @@ class _EditarEntregaManualScreenState extends State<EditarEntregaManualScreen> {
       );
     }
     final theme = Theme.of(context);
+    final screenW = MediaQuery.sizeOf(context).width;
+    final hPad = screenW < AppBreakpoints.narrowScreenWidth ? 12.0 : 20.0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar entrega manual'),
@@ -135,7 +137,7 @@ class _EditarEntregaManualScreenState extends State<EditarEntregaManualScreen> {
           child: Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
               children: [
             Text(
               _delivery!.sourceLabel,
@@ -156,17 +158,19 @@ class _EditarEntregaManualScreenState extends State<EditarEntregaManualScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _telefonoController,
-              decoration: const InputDecoration(labelText: 'Teléfono'),
+              decoration: const InputDecoration(
+                labelText: 'Teléfono',
+                hintText: 'Opcional',
+              ),
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _dniController,
-              decoration: const InputDecoration(labelText: 'DNI'),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Ingresá el DNI.';
-                return null;
-              },
+              decoration: const InputDecoration(
+                labelText: 'DNI',
+                hintText: 'Opcional',
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -204,26 +208,27 @@ class _EditarEntregaManualScreenState extends State<EditarEntregaManualScreen> {
                   child: Text('Sin asignar'),
                 ),
                 ..._users.map((u) {
-                  final label = AuthService.shortDisplayName(u.email);
-                  final fallback = u.uid.length > 6 ? '…${u.uid.substring(u.uid.length - 6)}' : u.uid;
                   return DropdownMenuItem<String?>(
                     value: u.uid,
-                    child: Text(label.isNotEmpty ? label : 'Conductor ($fallback)'),
+                    child: Text(UserRepository.driverDisplayLabel(u)),
                   );
                 }),
               ],
               onChanged: (v) => setState(() => _conductorId = v),
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _loading ? null : _submit,
-              child: _loading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Guardar cambios'),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Guardar cambios'),
+              ),
             ),
               ],
             ),

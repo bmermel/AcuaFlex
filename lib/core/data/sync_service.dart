@@ -48,6 +48,10 @@ class SyncService {
   /// Inicializar el servicio. Llamar una vez después de LocalDatabase.init().
   /// En web, solo se monitoea la conectividad (no hay offline sync).
   Future<void> init() async {
+    _connectivitySub?.cancel();
+    _syncTimer?.cancel();
+    _connectivitySub = null;
+    _syncTimer = null;
     try {
       // Verificar conectividad inicial
       final results = await _connectivity.checkConnectivity();

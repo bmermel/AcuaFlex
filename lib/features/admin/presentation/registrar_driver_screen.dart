@@ -62,6 +62,7 @@ class _RegistrarDriverScreenState extends State<RegistrarDriverScreen> {
         uid,
         email: email,
         role: _role,
+        loginUsername: usuario,
       );
       await AuthService.instance.signOut();
       if (!mounted) return;
@@ -71,7 +72,7 @@ class _RegistrarDriverScreenState extends State<RegistrarDriverScreen> {
           content: Text(
             'Usuario registrado. Aparecerá en filtros y asignaciones. Iniciá sesión de nuevo.',
           ),
-          backgroundColor: AppTheme.entregadoColor,
+          backgroundColor: AppTheme.adminEntregadoColor,
           duration: Duration(seconds: 4),
         ),
       );

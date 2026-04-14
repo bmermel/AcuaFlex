@@ -21,22 +21,23 @@ void _log(String location, String message, Map<String, dynamic> data) {
   if (kDebugMode) {
     // ignore: avoid_print
     print('[DELIVERY_DEBUG] $location | $message | ${jsonEncode(data)}');
+    // Ingest solo en modo debug (dev local). En release / Hosting no hay servidor en
+    // 127.0.0.1:7666 → ERR_CONNECTION_REFUSED y ruido en consola si esto corre siempre.
+    Future.microtask(() async {
+      try {
+        await http.post(
+          Uri.parse(_ingestUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Debug-Session-Id': _sessionId,
+          },
+          body: jsonEncode(payload),
+        );
+      } catch (_) {
+        // Servidor de ingest opcional; ignorar si no está levantado.
+      }
+    });
   }
-  // No usar .catchError(() {}) sobre Future<Response>: el handler debe devolver Response.
-  Future.microtask(() async {
-    try {
-      await http.post(
-        Uri.parse(_ingestUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': _sessionId,
-        },
-        body: jsonEncode(payload),
-      );
-    } catch (_) {
-      // Servidor de ingest opcional (127.0.0.1:7666); ignorar si no está levantado.
-    }
-  });
 }
 
 /// Llamar desde scan/repo para registrar pasos del flujo orderId.

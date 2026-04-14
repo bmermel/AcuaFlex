@@ -1,1 +1,3 @@
-# Colocar logo_acuaflex.png aquí para el logo de la app.
+# logo_acuaflex.png — logo Acuario (login + home). Debe ser PNG con transparencia; copiar tal cual, sin reprocesar.
+# app_brand_icon.png — icono launcher / splash / bootstrap
+# logo_acuaflex_src.png — solo si usás tool/strip_logo_white_background.dart (fondo blanco a alpha)

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+
+import '../../../core/widgets/adaptive_button_row.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// Resultado del diálogo "No entregado": motivo y hasta 2 fotos (XFile).
@@ -139,14 +141,14 @@ class _NoEntregadoDialogState extends State<_NoEntregadoDialog> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
-              Row(
+              AdaptiveButtonRow(
+                spacing: 8,
                 children: [
                   FilledButton.tonalIcon(
                     onPressed: _fotos.length >= 2 ? null : () => _pickImage(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt_outlined, size: 20),
                     label: const Text('Cámara'),
                   ),
-                  const SizedBox(width: 8),
                   FilledButton.tonalIcon(
                     onPressed: _fotos.length >= 2 ? null : () => _pickImage(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library_outlined, size: 20),

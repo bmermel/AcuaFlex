@@ -1,11 +1,11 @@
 {
-    "name": "acuaflex_v1",
-    "short_name": "acuaflex_v1",
+    "name": "AcuaFlex",
+    "short_name": "AcuaFlex",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F0F1F2",
+    "theme_color": "#269199",
+    "description": "AcuaFlex — gestión de entregas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

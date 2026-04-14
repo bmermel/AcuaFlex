@@ -19,7 +19,7 @@ class LocalDatabase {
   static LocalDatabase get instance => _instance;
 
   static const String _dbName = 'acuaflex_deliveries.db';
-  static const int _dbVersion = 2;
+  static const int _dbVersion = 4;
   static const String _tableDeliveries = 'deliveries';
   static const String _tablePendingSync = 'pending_sync';
 
@@ -90,6 +90,9 @@ class LocalDatabase {
         fechaNoEntrega TEXT,
         evidenciaNoEntrega TEXT,
         evidenciaNoEntregaPaths TEXT,
+        cierreLatitud REAL,
+        cierreLongitud REAL,
+        adminAvisoRetiroCambioLeido INTEGER,
         lastModified TEXT NOT NULL
       )
     ''');
@@ -122,6 +125,20 @@ class LocalDatabase {
       await db.execute('DROP TABLE IF EXISTS $_tablePendingSync');
       await db.execute('DROP TABLE IF EXISTS $_tableDeliveries');
       await _onCreate(db, newVersion);
+      return;
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE $_tableDeliveries ADD COLUMN cierreLatitud REAL',
+      );
+      await db.execute(
+        'ALTER TABLE $_tableDeliveries ADD COLUMN cierreLongitud REAL',
+      );
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+        'ALTER TABLE $_tableDeliveries ADD COLUMN adminAvisoRetiroCambioLeido INTEGER',
+      );
     }
   }
 
@@ -327,6 +344,11 @@ class LocalDatabase {
       'evidenciaNoEntregaPaths': d.evidenciaNoEntregaPaths != null
           ? jsonEncode(d.evidenciaNoEntregaPaths)
           : null,
+      'cierreLatitud': d.cierreLatitud,
+      'cierreLongitud': d.cierreLongitud,
+      'adminAvisoRetiroCambioLeido': d.adminAvisoRetiroCambioLeido == null
+          ? null
+          : (d.adminAvisoRetiroCambioLeido! ? 1 : 0),
       'lastModified': DateTime.now().toIso8601String(),
     };
   }
@@ -362,7 +384,27 @@ class LocalDatabase {
       fechaNoEntrega: _parseNullableDate(row['fechaNoEntrega']),
       evidenciaNoEntrega: _parseStringList(row['evidenciaNoEntrega']),
       evidenciaNoEntregaPaths: _parseStringList(row['evidenciaNoEntregaPaths']),
+      cierreLatitud: _parseDouble(row['cierreLatitud']),
+      cierreLongitud: _parseDouble(row['cierreLongitud']),
+      adminAvisoRetiroCambioLeido: _parseTriBool(row['adminAvisoRetiroCambioLeido']),
     );
+  }
+
+  static bool? _parseTriBool(dynamic v) {
+    if (v == null) return null;
+    if (v is int) {
+      if (v == 1) return true;
+      if (v == 0) return false;
+    }
+    return null;
+  }
+
+  static double? _parseDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 
   static DeliveryState _parseEstado(String? s) {

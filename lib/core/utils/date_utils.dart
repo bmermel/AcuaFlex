@@ -10,11 +10,26 @@ class AppDateUtils {
   static DateTime endOfDay(DateTime d) =>
       startOfDay(d).add(const Duration(days: 1));
 
+  /// Primer instante del mes calendario de [d].
+  static DateTime startOfMonth(DateTime d) => DateTime(d.year, d.month, 1);
+
+  /// Primer instante del mes siguiente a [d].
+  static DateTime startOfNextMonth(DateTime d) =>
+      DateTime(d.year, d.month + 1, 1);
+
+  /// Primer instante del mes anterior a [d].
+  static DateTime startOfPreviousMonth(DateTime d) =>
+      DateTime(d.year, d.month - 1, 1);
+
   /// True si [value] está en el rango [start, end) (start inclusivo, end exclusivo).
   static bool isInRange(DateTime value, DateTime start, DateTime end) =>
       !value.isBefore(start) && value.isBefore(end);
 
   static DateTime get _now => DateTime.now();
+
+  /// Rango [inicio, fin) del día calendario de [d] (hora local).
+  static (DateTime start, DateTime end) dayRange(DateTime d) =>
+      (startOfDay(d), endOfDay(d));
 
   /// Inicio y fin (exclusivo) del día de hoy.
   static (DateTime start, DateTime end) get todayRange {

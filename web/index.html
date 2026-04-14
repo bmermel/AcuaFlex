@@ -1,38 +1,356 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
+<!DOCTYPE html><html lang="es"><head>
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="AcuaFlex — gestión de entregas.">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="acuaflex_v1">
+  <meta name="apple-mobile-web-app-title" content="AcuaFlex">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>acuaflex_v1</title>
+  <title>AcuaFlex</title>
   <link rel="manifest" href="manifest.json">
+
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <style id="fish-loader-splash-style">
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #020305;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #020305;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #splash::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(88,175,184,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(88,175,184,0.06) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .splash-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .acua-loader-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    /* ══════════════════════════════
+       ORBIT CONTAINER
+    ══════════════════════════════ */
+    .loader {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      animation: orbit 2s linear infinite;
+    }
+
+    @keyframes orbit {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .track {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px dashed rgba(0, 220, 255, 0.18);
+    }
+
+    .track::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: rgba(0,220,255,0.5);
+      animation: spin-glow 2s linear infinite;
+    }
+
+    @keyframes spin-glow {
+      to { transform: rotate(360deg); }
+    }
+
+    .fish {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 30px;
+      animation: counterRotate 2s linear infinite;
+    }
+
+    @keyframes counterRotate {
+      from { transform: translateX(-50%) rotate(0deg); }
+      to   { transform: translateX(-50%) rotate(-360deg); }
+    }
+
+    .fish-body {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 22px;
+      background: linear-gradient(135deg, #58afb8, #269199);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      box-shadow: 0 0 14px #58afb8aa, 0 0 30px #58afb833;
+    }
+
+    .fish-body::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      width: 14px;
+      height: 1px;
+      background: rgba(255,255,255,0.5);
+      box-shadow:
+        0 4px 0 rgba(255,255,255,0.3),
+        6px 2px 0 rgba(255,255,255,0.3);
+    }
+
+    .fish-body::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      left: 7px;
+      width: 16px;
+      height: 5px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+    }
+
+    .fish-eye {
+      position: absolute;
+      right: 7px;
+      top: 50%;
+      transform: translateY(-65%);
+      width: 6px;
+      height: 6px;
+      background: #020305;
+      border-radius: 50%;
+      border: 1.5px solid #fff;
+      z-index: 2;
+    }
+
+    .fish-eye::after {
+      content: '';
+      position: absolute;
+      top: 1px; left: 1px;
+      width: 2px; height: 2px;
+      background: #fff;
+      border-radius: 50%;
+    }
+
+    .fish-fin {
+      position: absolute;
+      right: 12px;
+      top: -7px;
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 9px solid #58afb8;
+      filter: drop-shadow(0 0 3px #58afb888);
+    }
+
+    .fish-tail {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 11px solid transparent;
+      border-bottom: 11px solid transparent;
+      border-right: 18px solid #58afb8;
+      filter: drop-shadow(0 0 5px #58afb8aa);
+      animation: wag 0.4s ease-in-out infinite alternate;
+      transform-origin: right center;
+    }
+
+    @keyframes wag {
+      from { transform: translateY(-50%) scaleY(0.65) rotate(-18deg); }
+      to   { transform: translateY(-50%) scaleY(1.2)  rotate(18deg);  }
+    }
+
+    .bits {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .bit {
+      position: absolute;
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      color: rgba(88, 175, 184, 0.65);
+      animation: floatUp 2s ease-in infinite;
+      text-shadow: 0 0 6px #58afb8;
+    }
+
+    .bit:nth-child(1) { top: 8px;  left: 48%; animation-delay: 0s;    animation-duration: 1.6s; }
+    .bit:nth-child(2) { top: 14px; left: 54%; animation-delay: 0.4s;  animation-duration: 1.9s; font-size: 8px; }
+    .bit:nth-child(3) { top: 4px;  left: 42%; animation-delay: 0.8s;  animation-duration: 1.4s; }
+    .bit:nth-child(4) { top: 18px; left: 57%; animation-delay: 1.2s;  animation-duration: 2s;   font-size: 9px; }
+
+    @keyframes floatUp {
+      0%   { opacity: 0;   transform: translateY(0)     scale(0.8); }
+      20%  { opacity: 0.9; }
+      100% { opacity: 0;   transform: translateY(-38px) scale(1.2); }
+    }
+
+    .chip {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border: 1.5px solid rgba(88,175,184,0.45);
+      border-radius: 1px;
+      animation: blink 1.4s ease-in-out infinite alternate;
+    }
+
+    .chip::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 3px; height: 3px;
+      background: rgba(88,175,184,0.75);
+      border-radius: 50%;
+    }
+
+    .chip-1 { top: 18px;  right: 18px; animation-delay: 0s; }
+    .chip-2 { bottom: 18px; right: 18px; animation-delay: 0.5s; }
+    .chip-3 { bottom: 18px; left: 18px; animation-delay: 0.2s; }
+    .chip-4 { top: 18px;  left: 18px; animation-delay: 0.7s; }
+
+    @keyframes blink {
+      from { opacity: 0.3; box-shadow: none; }
+      to   { opacity: 1;   box-shadow: 0 0 6px #58afb8; }
+    }
+
+    .brand {
+      text-align: center;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow:
+        0 0 10px #58afb8,
+        0 0 30px #58afb866;
+      animation: pulseName 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseName {
+      from { text-shadow: 0 0 8px #58afb8, 0 0 20px #58afb844; }
+      to   { text-shadow: 0 0 18px #58afb8, 0 0 40px #58afb888; }
+    }
+
+    .brand-sub {
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: rgba(88,175,184,0.55);
+    }
+
+    .dots span {
+      display: inline-block;
+      width: 5px; height: 5px;
+      margin: 0 3px;
+      border-radius: 50%;
+      background: #58afb8;
+      animation: dot 1.4s ease-in-out infinite;
+      box-shadow: 0 0 6px #58afb8;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dot {
+      0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+      40%            { transform: scale(1.1); opacity: 1;   }
+    }
+  </style>
+  <script id="splash-screen-script">
+    function removeSplashFromWeb() {
+      document.getElementById("splash")?.remove();
+      document.getElementById("splash-branding")?.remove();
+      document.body.style.background = "transparent";
+    }
+  </script>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
-</body>
-</html>
+  <div id="splash">
+    <div class="splash-inner">
+      <div class="acua-loader-stack">
+        <div class="loader">
+          <div class="track"></div>
+          <div class="chip chip-1"></div>
+          <div class="chip chip-2"></div>
+          <div class="chip chip-3"></div>
+          <div class="chip chip-4"></div>
+          <div class="fish">
+            <div class="fish-tail"></div>
+            <div class="fish-body">
+              <div class="fish-fin"></div>
+              <div class="fish-eye"></div>
+            </div>
+          </div>
+          <div class="bits">
+            <div class="bit">1</div>
+            <div class="bit">0</div>
+            <div class="bit">1</div>
+            <div class="bit">0</div>
+          </div>
+        </div>
+        <div class="brand">
+          <div class="brand-name">Insumos Acuario</div>
+          <div class="brand-sub">Insumos y Tecnología</div>
+          <br>
+          <div class="dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="flutter_bootstrap.js" async=""></script>
+</body></html>

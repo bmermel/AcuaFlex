@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+
+import '../../../core/widgets/adaptive_button_row.dart';
 import 'package:flutter_signature_pad/flutter_signature_pad.dart';
 
 /// Pantalla full-screen para capturar una firma.
@@ -64,25 +66,29 @@ class _FirmaEntregaScreenState extends State<FirmaEntregaScreen> {
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
+            child: AdaptiveButtonRow(
+              spacing: 12,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      final sign = _signKey.currentState;
-                      sign?.clear();
-                      if (mounted) setState(() => _hasSignature = false);
-                    },
-                    icon: const Icon(Icons.clear_outlined),
-                    label: const Text('Limpiar'),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    final sign = _signKey.currentState;
+                    sign?.clear();
+                    if (mounted) setState(() => _hasSignature = false);
+                  },
+                  icon: const Icon(Icons.clear_outlined),
+                  label: const Text(
+                    'Limpiar',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _hasSignature ? _confirmar : null,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Confirmar firma'),
+                FilledButton.icon(
+                  onPressed: _hasSignature ? _confirmar : null,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text(
+                    'Confirmar firma',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

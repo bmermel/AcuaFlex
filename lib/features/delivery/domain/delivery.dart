@@ -6,9 +6,18 @@ abstract class DeliverySourceType {
   static const String fc = 'FC';   // Factura
   static const String ov = 'OV';   // Orden de venta
   static const String cot = 'COT'; // Cotización
+  static const String ret = 'RET'; // Retiro de producto
+  static const String cam = 'CAM'; // Cambio de producto (misma carga que retiro)
 
-  static const List<String> manualTypes = [fc, ov, cot];
-  static const List<String> allManualOptions = [ped, fc, ov, cot];
+  /// Incluye [ped] para cargar un pedido web cuando no hay QR (mismo [orderId] que el QR: `PED-…`).
+  static const List<String> manualTypes = [ped, fc, ov, cot, ret, cam];
+  static const List<String> allManualOptions = [ped, fc, ov, cot, ret, cam];
+
+  /// Retiro o cambio de producto: mismo formulario y lógica operativa.
+  static bool isRetiroOCambio(String type) {
+    final t = type.trim().toUpperCase();
+    return t == ret || t == cam;
+  }
 
   static String label(String type) {
     switch (type) {
@@ -16,6 +25,8 @@ abstract class DeliverySourceType {
       case fc: return 'Factura (FC)';
       case ov: return 'Orden de venta (OV)';
       case cot: return 'Cotización (COT)';
+      case ret: return 'Retiro de producto';
+      case cam: return 'Cambio de producto';
       default: return type;
     }
   }
@@ -46,12 +57,16 @@ class Delivery {
     this.sourceType = DeliverySourceType.ped,
     this.sourceNumber,
     this.createdManually = false,
+    /// Solo RET/CAM manual: `false` = el admin aún no marcó que recibió el aviso de retiro/cambio.
+    this.adminAvisoRetiroCambioLeido,
     this.firmaBase64,
     this.fechaFirma,
     this.motivoNoEntrega,
     this.fechaNoEntrega,
     this.evidenciaNoEntrega,
     this.evidenciaNoEntregaPaths,
+    this.cierreLatitud,
+    this.cierreLongitud,
   });
 
   final String id;
@@ -76,12 +91,14 @@ class Delivery {
   final String? localidad;
   final String? provincia;
 
-  /// Tipo de documento: PED (pedido web), FC, OV, COT.
+  /// Tipo de documento: PED (pedido web), FC, OV, COT, RET, CAM.
   final String sourceType;
   /// Número de documento (FC/OV/COT). Null para PED.
   final String? sourceNumber;
   /// True si se creó desde el formulario manual de admin.
   final bool createdManually;
+  /// null = documento sin este control (histórico u otros tipos); false = pendiente de aviso admin; true = ya visto.
+  final bool? adminAvisoRetiroCambioLeido;
 
   /// Firma del receptor en base64 (PNG). null si no hay firma cargada.
   final String? firmaBase64;
@@ -98,6 +115,11 @@ class Delivery {
   /// Ej: deliveries/{deliveryId}/no_entrega_0.jpg
   final List<String>? evidenciaNoEntregaPaths;
 
+  /// Latitud del conductor al marcar entregado o no entregado (GPS).
+  final double? cierreLatitud;
+  /// Longitud del conductor al marcar entregado o no entregado (GPS).
+  final double? cierreLongitud;
+
   bool get hasOrderId => orderId != null && orderId!.trim().isNotEmpty;
 
   /// True si la entrega no tiene conductor asignado todavía.
@@ -110,8 +132,77 @@ class Delivery {
   bool get isWebPedido =>
       sourceType == DeliverySourceType.ped && hasOrderId && !createdManually;
 
-  /// True si es carga manual (FC/OV/COT o PED manual).
+  /// True si es carga manual (FC/OV/COT/RET/CAM o PED manual).
   bool get isManual => createdManually;
+
+  /// El admin debe ver el aviso de retiro/cambio hasta marcarlo como leído (solo si se creó con aviso pendiente).
+  bool get needsAdminAvisoRetiroCambio =>
+      createdManually &&
+      DeliverySourceType.isRetiroOCambio(sourceType) &&
+      adminAvisoRetiroCambioLeido == false;
+
+  /// Dirección para mostrar y para abrir en Maps: prioriza [direccionCompleta],
+  /// si no hay, arma calle + localidad + CP (mismo criterio que el botón Maps).
+  String get addressLineForMaps {
+    if (direccionCompleta != null && direccionCompleta!.trim().isNotEmpty) {
+      return direccionCompleta!.trim();
+    }
+    final parts = <String>[];
+    if (direccion.trim().isNotEmpty) parts.add(direccion.trim());
+    if (localidad != null && localidad!.trim().isNotEmpty) {
+      parts.add(localidad!.trim());
+    }
+    if (codigoPostal != null && codigoPostal!.trim().isNotEmpty) {
+      parts.add(codigoPostal!.trim());
+    }
+    return parts.join(', ');
+  }
+
+  bool get hasAddressForMaps => addressLineForMaps.trim().isNotEmpty;
+
+  /// Texto para pantallas, listados y PDFs. **No** altera [orderId] en Firestore / QR.
+  /// - `PED-12345` → `#12345`
+  /// - `MAN-OV-999` → `OV 999` (sin prefijo `MAN-`)
+  static String formatOrderIdForDisplay(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return '';
+    final upper = s.toUpperCase();
+    if (upper.startsWith('PED-') && s.length > 4) {
+      return '#${s.substring(4)}';
+    }
+    if (upper.startsWith('MAN-') && s.length > 4) {
+      final after = s.substring(4);
+      final i = after.indexOf('-');
+      if (i > 0) {
+        return '${after.substring(0, i)} ${after.substring(i + 1)}';
+      }
+      return after;
+    }
+    return s;
+  }
+
+  /// Igual que [formatOrderIdForDisplay] para el [orderId] de esta entrega.
+  String get displayOrderRef =>
+      hasOrderId ? formatOrderIdForDisplay(orderId!) : '';
+
+  /// Título principal del detalle (solo presentación; el dato sigue siendo [orderId] crudo).
+  String get detailHeaderPrimaryTitle {
+    if (hasOrderId) return formatOrderIdForDisplay(orderId!.trim());
+    if (createdManually &&
+        sourceNumber != null &&
+        sourceNumber!.trim().isNotEmpty) {
+      return sourceLabel;
+    }
+    if (nombre.trim().isNotEmpty) return nombre.trim();
+    return 'Entrega';
+  }
+
+  /// Subtítulo bajo el número (origen del envío).
+  String? get detailHeaderSubtitle {
+    if (hasOrderId && !createdManually) return 'Pedido web';
+    if (isManual) return 'Carga manual';
+    return null;
+  }
 
   /// Etiqueta corta para UI: "FC 12345", "Pedido web", etc.
   String get sourceLabel {
@@ -122,11 +213,29 @@ class Delivery {
     return DeliverySourceType.label(sourceType);
   }
 
+  /// Referencia para badge en listados admin (solo presentación). Null si no hay dato útil.
+  String? get documentRefForBadge {
+    if (hasOrderId) return formatOrderIdForDisplay(orderId!.trim());
+    final n = sourceNumber?.trim();
+    if (n != null && n.isNotEmpty) {
+      return '${sourceType.trim().toUpperCase()} $n';
+    }
+    return null;
+  }
+
   static String _s(dynamic v) => v == null ? '' : v.toString().trim();
   static String? _sOrNull(dynamic v) {
     if (v == null) return null;
     final s = (v is String ? v : v.toString()).trim();
     return s.isEmpty ? null : s;
+  }
+
+  static double? _readDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
   }
 
   static List<String>? _readStringList(dynamic v) {
@@ -139,11 +248,21 @@ class Delivery {
     return list.isEmpty ? null : list;
   }
 
-  /// orderId para entregas manuales (duplicados por tipo + número).
+  /// orderId para entregas manuales (duplicados por tipo + número), excepto [ped].
   static String manualOrderId(String sourceType, String sourceNumber) {
     final t = sourceType.trim().toUpperCase();
     final n = sourceNumber.trim();
     return 'MAN-$t-$n';
+  }
+
+  /// Pedido web cargado a mano: mismo formato que el QR (`PED-12345`), no `MAN-PED-…`.
+  static String manualPedOrderId(String sourceNumberOrFull) {
+    var t = sourceNumberOrFull.trim();
+    if (t.isEmpty) return '';
+    t = t.replaceAll(RegExp(r'\s+'), '');
+    final u = t.toUpperCase();
+    if (u.startsWith('PED-')) return u;
+    return 'PED-$u';
   }
 
   /// Crea una entrega desde el JSON del QR.
@@ -176,6 +295,7 @@ class Delivery {
       sourceType: sourceTypeVal,
       sourceNumber: _sOrNull(json['sourceNumber']),
       createdManually: createdManuallyVal,
+      adminAvisoRetiroCambioLeido: _readTriBool(json['adminAvisoRetiroCambioLeido']),
     );
   }
 
@@ -213,6 +333,9 @@ class Delivery {
     if (createdManually) {
       map['createdManually'] = true;
     }
+    if (adminAvisoRetiroCambioLeido != null) {
+      map['adminAvisoRetiroCambioLeido'] = adminAvisoRetiroCambioLeido;
+    }
     return map;
   }
 
@@ -237,9 +360,14 @@ class Delivery {
       'fechaNoEntrega': fechaNoEntrega,
       'evidenciaNoEntrega': evidenciaNoEntrega,
       'evidenciaNoEntregaPaths': evidenciaNoEntregaPaths,
+      'cierreLatitud': cierreLatitud,
+      'cierreLongitud': cierreLongitud,
       'sourceType': sourceType,
       'createdManually': createdManually,
     };
+    if (adminAvisoRetiroCambioLeido != null) {
+      map['adminAvisoRetiroCambioLeido'] = adminAvisoRetiroCambioLeido;
+    }
     if (orderId != null) map['orderId'] = orderId;
     if (direccionCompleta != null) map['direccionCompleta'] = direccionCompleta;
     if (codigoPostal != null) map['codigoPostal'] = codigoPostal;
@@ -270,6 +398,8 @@ class Delivery {
       fechaNoEntrega: map['fechaNoEntrega'] as DateTime?,
       evidenciaNoEntrega: _readStringList(map['evidenciaNoEntrega']),
       evidenciaNoEntregaPaths: _readStringList(map['evidenciaNoEntregaPaths']),
+      cierreLatitud: _readDouble(map['cierreLatitud']),
+      cierreLongitud: _readDouble(map['cierreLongitud']),
       orderId: _sOrNull(map['orderId']),
       direccionCompleta: _sOrNull(map['direccionCompleta']),
       codigoPostal: _sOrNull(map['codigoPostal']),
@@ -278,7 +408,14 @@ class Delivery {
       sourceType: _s(map['sourceType']).isEmpty ? DeliverySourceType.ped : _s(map['sourceType']),
       sourceNumber: _sOrNull(map['sourceNumber']),
       createdManually: map['createdManually'] == true,
+      adminAvisoRetiroCambioLeido: _readTriBool(map['adminAvisoRetiroCambioLeido']),
     );
+  }
+
+  static bool? _readTriBool(dynamic v) {
+    if (v == null) return null;
+    if (v is bool) return v;
+    return null;
   }
 
   static DeliveryState _readEstado(dynamic v) {
@@ -291,6 +428,7 @@ class Delivery {
 
   Delivery copyWith({
     DeliveryState? estado,
+    DateTime? fechaEscaneo,
     DateTime? fechaEntrega,
     String? nombreRecibe,
     String? dniRecibe,
@@ -311,6 +449,11 @@ class Delivery {
     String? localidad,
     String? provincia,
     String? direccionCompleta,
+    double? cierreLatitud,
+    double? cierreLongitud,
+    bool? adminAvisoRetiroCambioLeido,
+    /// Si es true, borra firma y fecha en BD (no se puede lograr con `null` en [firmaBase64]).
+    bool clearFirma = false,
   }) {
     return Delivery(
       id: id,
@@ -321,18 +464,22 @@ class Delivery {
       observaciones: observaciones ?? this.observaciones,
       estado: estado ?? this.estado,
       conductorId: conductorId ?? this.conductorId,
-      fechaEscaneo: fechaEscaneo,
+      fechaEscaneo: fechaEscaneo ?? this.fechaEscaneo,
       fechaEntrega: fechaEntrega ?? this.fechaEntrega,
       nombreRecibe: nombreRecibe ?? this.nombreRecibe,
       dniRecibe: dniRecibe ?? this.dniRecibe,
       relacionRecibe: relacionRecibe ?? this.relacionRecibe,
-      firmaBase64: firmaBase64 ?? this.firmaBase64,
-      fechaFirma: fechaFirma ?? this.fechaFirma,
+      firmaBase64:
+          clearFirma ? null : (firmaBase64 ?? this.firmaBase64),
+      fechaFirma:
+          clearFirma ? null : (fechaFirma ?? this.fechaFirma),
       motivoNoEntrega: motivoNoEntrega ?? this.motivoNoEntrega,
       fechaNoEntrega: fechaNoEntrega ?? this.fechaNoEntrega,
       evidenciaNoEntrega: evidenciaNoEntrega ?? this.evidenciaNoEntrega,
       evidenciaNoEntregaPaths:
           evidenciaNoEntregaPaths ?? this.evidenciaNoEntregaPaths,
+      cierreLatitud: cierreLatitud ?? this.cierreLatitud,
+      cierreLongitud: cierreLongitud ?? this.cierreLongitud,
       orderId: orderId,
       direccionCompleta: direccionCompleta ?? this.direccionCompleta,
       codigoPostal: codigoPostal ?? this.codigoPostal,
@@ -341,6 +488,8 @@ class Delivery {
       sourceType: sourceType,
       sourceNumber: sourceNumber,
       createdManually: createdManually,
+      adminAvisoRetiroCambioLeido:
+          adminAvisoRetiroCambioLeido ?? this.adminAvisoRetiroCambioLeido,
     );
   }
 }

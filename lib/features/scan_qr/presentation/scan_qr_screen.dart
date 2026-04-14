@@ -13,13 +13,8 @@ import '../../delivery/data/delivery_repository.dart';
 import '../../delivery/domain/delivery.dart';
 
 class _ScanMessages {
-  static const String invalidJson =
-      'El QR no contiene un JSON válido. Debe incluir al menos nombre, DNI y dirección.';
   static const String missingFields =
       'Faltan datos en el QR. Debe incluir nombre, DNI y dirección.';
-  static const String missingOrderId =
-      'El QR no tiene identificador único de pedido (orderId). '
-      'Para identificación confiable use el nuevo formato de QR.';
   static const String duplicateOwn =
       'Este pedido ya fue cargado por vos.';
   static const String duplicateOtherDriver =

@@ -38,6 +38,16 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // Solo ARM en release (teléfonos reales). El debug mantiene todas las ABI para emulador x86.
+            ndk {
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            }
         }
     }
 }

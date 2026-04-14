@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../core/debug_delivery_log.dart';
+import '../../../core/utils/driver_location.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../../core/auth/auth_service.dart';
 import '../data/delivery_repository.dart';
@@ -95,6 +97,10 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
   DateTime? _fechaFirma;
   bool _saving = false;
   bool _signing = false;
+  /// True solo tras confirmar entrega con éxito (no al volver atrás).
+  bool _confirmedExit = false;
+  /// True si se cerró la pantalla tras guardar "no entregado" (evita limpieza errónea en dispose).
+  bool _closedByNoEntregadoFlow = false;
 
   @override
   void initState() {
@@ -111,6 +117,18 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
 
   @override
   void dispose() {
+    // Evitar firmas guardadas en BD sin confirmar (p. ej. datos viejos o bug previo).
+    if (!_confirmedExit &&
+        !_closedByNoEntregadoFlow &&
+        widget.delivery.estado == DeliveryState.pendiente &&
+        widget.delivery.firmaBase64 != null &&
+        widget.delivery.firmaBase64!.trim().isNotEmpty) {
+      DeliveryRepository.instance
+          .updateDelivery(
+            widget.delivery.copyWith(clearFirma: true),
+          )
+          .catchError((_) {});
+    }
     _nombreController.dispose();
     _dniController.dispose();
     super.dispose();
@@ -134,14 +152,7 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
         _firmaBase64 = base64Png;
         _fechaFirma = now;
       });
-
-      // Guardamos la firma inmediatamente para que el estado sea consistente
-      // y el usuario vea el preview ya cargado.
-      final updated = widget.delivery.copyWith(
-        firmaBase64: base64Png,
-        fechaFirma: now,
-      );
-      await DeliveryRepository.instance.updateDelivery(updated);
+      // La firma queda solo en memoria hasta "Confirmar entrega"; no persistir aquí.
     } finally {
       if (mounted) setState(() => _signing = false);
     }
@@ -154,11 +165,15 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
 
     setState(() => _saving = true);
     try {
+      final pos = await tryCaptureDriverLocation();
       final fechaNoEntrega = DateTime.now();
       final updatedBase = widget.delivery.copyWith(
         estado: DeliveryState.noEntregado,
         motivoNoEntrega: result.motivo.trim(),
         fechaNoEntrega: fechaNoEntrega,
+        cierreLatitud: pos?.lat,
+        cierreLongitud: pos?.lng,
+        clearFirma: true,
       );
       // 1) Guardar siempre estado/motivo/fecha. Esto evita que un fallo de Storage
       // deje la entrega en un estado "no guardado".
@@ -218,6 +233,7 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
       }
 
       if (!mounted) return;
+      _closedByNoEntregadoFlow = true;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Entrega marcada como NO ENTREGADA.'),
@@ -263,6 +279,7 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
 
     setState(() => _saving = true);
     try {
+      final pos = await tryCaptureDriverLocation();
       final fechaFirma = _fechaFirma ?? DateTime.now();
       final updated = widget.delivery.copyWith(
         estado: DeliveryState.entregado,
@@ -272,9 +289,12 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
         relacionRecibe: relacion,
         firmaBase64: _firmaBase64,
         fechaFirma: fechaFirma,
+        cierreLatitud: pos?.lat,
+        cierreLongitud: pos?.lng,
       );
       await DeliveryRepository.instance.updateDelivery(updated);
       if (!mounted) return;
+      _confirmedExit = true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Entrega confirmada.'),
@@ -298,6 +318,8 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
   @override
   Widget build(BuildContext context) {
     final delivery = widget.delivery;
+    final screenW = MediaQuery.sizeOf(context).width;
+    final hPad = screenW < AppBreakpoints.narrowScreenWidth ? 12.0 : 20.0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Confirmar entrega'),
@@ -312,7 +334,7 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
           child: Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
               children: [
             Text(
               'Datos de quien recibe',
@@ -412,31 +434,55 @@ class _ConfirmarFormState extends State<_ConfirmarForm> {
               ),
               const SizedBox(height: 12),
             ],
-            FilledButton.tonalIcon(
-              onPressed: _signing || _saving ? null : _abrirFirma,
-              icon: const Icon(Icons.edit_document),
-              label: Text(_signing ? 'Abriendo firma...' : 'Firmar'),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _signing || _saving ? null : _abrirFirma,
+                icon: const Icon(Icons.edit_document),
+                label: Text(
+                  _signing ? 'Abriendo firma...' : 'Firmar',
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: _saving ? null : _marcarNoEntregado,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text(
+                  'No entregado',
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
             const SizedBox(height: 14),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _confirmar,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_circle),
+                label: Text(
+                  _saving ? 'Guardando...' : 'Confirmar entrega',
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              onPressed: _saving ? null : _marcarNoEntregado,
-              icon: const Icon(Icons.cancel_outlined),
-              label: const Text('No entregado'),
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: _saving ? null : _confirmar,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle),
-              label: Text(_saving ? 'Guardando...' : 'Confirmar entrega'),
             ),
               ],
             ),
